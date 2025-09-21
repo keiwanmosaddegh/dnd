@@ -5901,8 +5901,24 @@ ${latestSubscriptionCallbackError.current.stack}
     return marshal;
   }
 
+  function querySelectorAllWithShadowDOM(node, selector) {
+    const results = [];
+    const directMatches = Array.from(node.querySelectorAll(selector));
+    results.push(...directMatches);
+    const allElements = Array.from(node.querySelectorAll('*'));
+    for (const element of allElements) {
+      if (element.shadowRoot) {
+        const shadowMatches = querySelectorAllWithShadowDOM(element.shadowRoot, selector);
+        results.push(...shadowMatches);
+      }
+    }
+    return results;
+  }
   function querySelectorAll(parentNode, selector) {
-    return Array.from(parentNode.querySelectorAll(selector));
+    if (parentNode === document) {
+      return querySelectorAllWithShadowDOM(document, selector);
+    }
+    return querySelectorAllWithShadowDOM(parentNode, selector);
   }
 
   var getWindowFromEl = el => {
