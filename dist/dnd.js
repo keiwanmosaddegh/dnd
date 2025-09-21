@@ -7125,27 +7125,35 @@ ${latestSubscriptionCallbackError.current.stack}
     const value = candidates.find(name => name in Element.prototype);
     return value || base;
   })();
-  function closestPonyfill(el, selector) {
-    if (el == null) {
-      return null;
-    }
-    if (el[supportedMatchesName](selector)) {
-      return el;
-    }
-    return closestPonyfill(el.parentElement, selector);
+  function elementMatches(el, selector) {
+    return el[supportedMatchesName](selector);
   }
   function closest(el, selector) {
-    if (el.closest) {
-      return el.closest(selector);
+    let current = el;
+    while (current) {
+      if (elementMatches(current, selector)) {
+        return current;
+      }
+      if (current.parentElement) {
+        current = current.parentElement;
+      } else {
+        const root = current.getRootNode();
+        if (root && root !== document && root.host) {
+          current = root.host;
+        } else {
+          current = null;
+        }
+      }
     }
-    return closestPonyfill(el, selector);
+    return null;
   }
 
   function getSelector(contextId) {
     return `[${dragHandle.contextId}="${contextId}"]`;
   }
   function findClosestDragHandleFromEvent(contextId, event) {
-    const target = event.target;
+    const path = event.composedPath();
+    const target = path[0] || event.target;
     if (!isElement(target)) {
       warning$1('event.target must be a Element') ;
       return null;

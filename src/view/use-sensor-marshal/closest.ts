@@ -21,26 +21,38 @@ const supportedMatchesName:
   return value || base;
 })();
 
-function closestPonyfill(el: Element | null, selector: string): null | Element {
-  if (el == null) {
-    return null;
-  }
-
-  // Element.prototype.matches is supported in ie11 with a different name
-  // https://caniuse.com/#feat=matchesselector
-  if (el[supportedMatchesName as 'matches'](selector)) {
-    return el;
-  }
-
-  // recursively look up the tree
-  return closestPonyfill(el.parentElement, selector);
+function elementMatches(el: Element, selector: string): boolean {
+  // Use the supported matches method name for IE11 compatibility
+  return el[supportedMatchesName as 'matches'](selector);
 }
 
 export default function closest(el: Element, selector: string): Element | null {
-  // Using native closest for maximum speed where we can
-  if (el.closest) {
-    return el.closest(selector);
+  // For shadow DOM compatibility, we need to handle crossing shadow boundaries
+  // Native closest() doesn't cross shadow boundaries, so we need our own implementation
+
+  let current: Element | null = el;
+
+  while (current) {
+    // Check if current element matches
+    if (elementMatches(current, selector)) {
+      return current;
+    }
+
+    // Try to move up in the DOM
+    if (current.parentElement) {
+      current = current.parentElement;
+    } else {
+      // We might be at a shadow root boundary
+      const root = current.getRootNode();
+      if (root && root !== document && (root as ShadowRoot).host) {
+        // Continue searching from the shadow host
+        current = (root as ShadowRoot).host;
+      } else {
+        // No more parents to check
+        current = null;
+      }
+    }
   }
-  // ie11: damn you!
-  return closestPonyfill(el, selector);
+
+  return null;
 }
